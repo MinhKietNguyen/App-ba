@@ -14,3 +14,4 @@ Tìm đến auth-controller chạy cái /auth/login
 Xong rồi thích test controller nào thì test
 
 Chạy xong thấy bug nào viết vào Bug.txt cho t để t còn fix
+Nhớ đọc commit, t gửi.
