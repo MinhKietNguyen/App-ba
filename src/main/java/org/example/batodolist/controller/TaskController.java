@@ -1,51 +1,45 @@
 package org.example.batodolist.controller;
 
-import lombok.RequiredArgsConstructor;
+import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.TaskRequest;
 import org.example.batodolist.dto.request.TaskUpdateRequest;
 import org.example.batodolist.dto.response.TaskResponse;
 import org.example.batodolist.service.TaskService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/tasks")
-@RequiredArgsConstructor
+@RequestMapping("/task")
 public class TaskController {
     private final TaskService taskService;
 
-    @PostMapping
-    public ResponseEntity<TaskResponse> create(@RequestBody TaskRequest request) {
-        TaskResponse res = taskService.create(request);
-        return ResponseEntity.created(URI.create("/api/tasks/" + res.getId())).body(res);
+    @Autowired
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
+    }
+    @GetMapping("/detail")
+    public ResponseEntity<TaskResponse> getService(@RequestParam Long id) {
+        return ResponseEntity.ok().body(taskService.getByID(id));
     }
 
-   
-    @GetMapping("/{id}")
-    public ResponseEntity<TaskResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.getById(id));
+    @PostMapping("/create")
+    public ResponseEntity<TaskResponse> postService(@RequestBody TaskRequest taskRequest) {
+        return ResponseEntity.ok().body(taskService.create(taskRequest));
     }
 
-   
-    @GetMapping
-    public ResponseEntity<List<TaskResponse>> getAll() {
-        return ResponseEntity.ok(taskService.getAll());
+    @PutMapping("/update")
+    public ResponseEntity<TaskResponse> putService(@RequestBody TaskUpdateRequest taskUpdateRequest, @RequestParam Long id){
+        return ResponseEntity.ok().body(taskService.update(taskUpdateRequest, id));
     }
-
-   
-    @PutMapping("/{id}")
-    public ResponseEntity<TaskResponse> update(@PathVariable Long id,
-                                               @RequestBody TaskUpdateRequest request) {
-        return ResponseEntity.ok(taskService.update(id, request));
-    }
-
-  
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    @DeleteMapping("/delete")
+    public ResponseEntity<ErrorCode> deleteService(@RequestParam Long id) {
         taskService.delete(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().body(ErrorCode.SUCCESS);
+    }
+    @GetMapping("/paging")
+    public ResponseEntity<Page<TaskResponse>> paging(int offset, int limit) {
+        return ResponseEntity.ok().body(taskService.paging(offset, limit));
     }
 }

@@ -1,8 +1,8 @@
 package org.example.batodolist.common;
 
 public enum TaskStatus {
-    TODO,
-    IN_PROGRESS,
-    DONE,
-    OVERDUE
+    todo,
+    in_progress,
+    done,
+    overdue
 }

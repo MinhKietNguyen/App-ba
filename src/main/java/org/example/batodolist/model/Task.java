@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -36,11 +37,11 @@ public class Task {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TaskStatus status = TaskStatus.TODO;
+    private TaskStatus status = TaskStatus.todo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TaskPriority priority = TaskPriority.MEDIUM;
+    private TaskPriority priority = TaskPriority.medium;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to")
@@ -67,6 +68,9 @@ public class Task {
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Reminder> reminders;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "task")
+    private List<TaskLabel> taskLabels = new ArrayList<>();
 
     // Check constraint validation
     @PrePersist

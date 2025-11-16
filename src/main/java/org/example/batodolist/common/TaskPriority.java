@@ -1,7 +1,7 @@
 package org.example.batodolist.common;
 
 public enum TaskPriority {
-    LOW,
-    MEDIUM,
-    HIGH
+    low,
+    medium,
+    high
 }

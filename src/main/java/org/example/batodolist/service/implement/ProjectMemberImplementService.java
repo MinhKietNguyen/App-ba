@@ -3,6 +3,7 @@ package org.example.batodolist.service.implement;
 import org.example.batodolist.common.BadRequestException;
 import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.ProjectMemberRequest;
+import org.example.batodolist.dto.request.ProjectMemberUpdateRequest;
 import org.example.batodolist.dto.response.ProjectMemberResponse;
 import org.example.batodolist.model.ProjectMember;
 import org.example.batodolist.repo.ProjectMemberRepository;
@@ -42,10 +43,10 @@ public class ProjectMemberImplementService implements ProjectMemberService {
     }
 
     @Override
-    public ProjectMemberResponse update(ProjectMemberRequest projectMemberRequest, Long id) {
+    public ProjectMemberResponse update(ProjectMemberUpdateRequest projectMemberUpdateRequest, Long id) {
         ProjectMemberResponse projectMemberResponse = new ProjectMemberResponse();
         ProjectMember projectMember = projectMemberRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        BeanUtils.copyProperties(projectMemberRequest, projectMember);
+        BeanUtils.copyProperties(projectMemberUpdateRequest, projectMember);
         projectMemberRepository.save(projectMember);
         BeanUtils.copyProperties(projectMember, projectMemberResponse);
         return projectMemberResponse;
@@ -53,7 +54,8 @@ public class ProjectMemberImplementService implements ProjectMemberService {
 
     @Override
     public void delete(Long id) {
-        projectMemberRepository.deleteById(id);
+        ProjectMember projectMember = projectMemberRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        projectMemberRepository.delete(projectMember);
     }
     @Override
     public Page<ProjectMemberResponse> paging(int offset, int limit) {

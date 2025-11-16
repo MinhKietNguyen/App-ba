@@ -1,0 +1,314 @@
+-- Create ENUM types
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'member');
+CREATE TYPE project_member_role AS ENUM ('leader', 'member');
+CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'done', 'overdue');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+CREATE TYPE event_recurrence AS ENUM ('daily', 'weekly', 'monthly', 'none');
+
+-- Create Tables
+CREATE TABLE Users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    role user_role NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    start_date DATE,
+    end_date DATE,
+    manager_id INT REFERENCES Users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Project_Members (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES Projects(id) ON DELETE CASCADE,
+    user_id INT REFERENCES Users(id) ON DELETE CASCADE,
+    role_in_project project_member_role NOT NULL,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(project_id, user_id)
+);
+
+CREATE TABLE Tasks (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES Projects(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE,
+    status task_status DEFAULT 'todo',
+    priority task_priority DEFAULT 'medium',
+    assigned_to INT REFERENCES Project_Members(id),
+    created_by INT REFERENCES Users(id), -- For personal tasks (when project_id is NULL)
+    progress INT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (
+        (project_id IS NOT NULL AND assigned_to IS NOT NULL AND created_by IS NULL) OR
+        (project_id IS NULL AND assigned_to IS NULL AND created_by IS NOT NULL)
+    )
+);
+
+CREATE TABLE Task_Checklists (
+    id SERIAL PRIMARY KEY,
+    task_id INT REFERENCES Tasks(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_completed BOOLEAN DEFAULT FALSE,
+    completed_at TIMESTAMP,
+    position INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Reminders (
+    id SERIAL PRIMARY KEY,
+    task_id INT REFERENCES Tasks(id) ON DELETE CASCADE,
+    reminder_time TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Events (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES Projects(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    recurrence event_recurrence DEFAULT 'none',
+    integration_source VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Messages (
+    id SERIAL PRIMARY KEY,
+    project_id INT REFERENCES Projects(id) ON DELETE CASCADE,
+    user_id INT REFERENCES Project_Members(id),
+    content TEXT NOT NULL,
+    parent_id INT REFERENCES Messages(id),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE labels (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE task_labels (
+    task_id INT NOT NULL,
+    label_id INT NOT NULL,
+    PRIMARY KEY (task_id, label_id),
+
+    CONSTRAINT fk_task
+        FOREIGN KEY (task_id) REFERENCES tasks(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_label
+        FOREIGN KEY (label_id) REFERENCES labels(id)
+        ON DELETE CASCADE
+);
+
+-- Insert Sample Data
+
+-- Users
+INSERT INTO Users (username, email, password_hash, full_name, role) VALUES
+('admin_user', 'admin@company.com', '$2a$10$abcdefghijklmnopqrstuv', 'Admin User', 'admin'),
+('john_manager', 'john@company.com', '$2a$10$wxyzabcdefghijklmnopqr', 'John Smith', 'manager'),
+('alice_dev', 'alice@company.com', '$2a$10$123456789abcdefghijklm', 'Alice Johnson', 'member'),
+('bob_dev', 'bob@company.com', '$2a$10$nopqrstuvwxyz123456789', 'Bob Williams', 'member'),
+('sarah_design', 'sarah@company.com', '$2a$10$qwertyuiop1234567890ab', 'Sarah Brown', 'member'),
+('mike_qa', 'mike@company.com', '$2a$10$asdfghjkl0987654321xyz', 'Mike Davis', 'member');
+
+-- Projects
+INSERT INTO Projects (name, description, start_date, end_date, manager_id) VALUES
+('E-commerce Platform', 'Build a scalable e-commerce platform with microservices architecture', '2025-01-15', '2025-06-30', 2),
+('Mobile App Redesign', 'Redesign mobile application with modern UI/UX', '2025-02-01', '2025-05-15', 2),
+('Data Analytics Dashboard', 'Create real-time analytics dashboard for business intelligence', '2025-03-01', '2025-07-31', 2);
+
+-- Project Members
+INSERT INTO Project_Members (project_id, user_id, role_in_project) VALUES
+-- E-commerce Platform team
+(1, 2, 'leader'),
+(1, 3, 'member'),
+(1, 4, 'member'),
+(1, 6, 'member'),
+-- Mobile App Redesign team
+(2, 2, 'leader'),
+(2, 5, 'member'),
+(2, 3, 'member'),
+-- Data Analytics Dashboard team
+(3, 2, 'leader'),
+(3, 3, 'member'),
+(3, 4, 'member');
+
+-- Tasks (Project Tasks)
+INSERT INTO Tasks (project_id, name, description, due_date, status, priority, assigned_to, created_by, progress) VALUES
+-- E-commerce Platform tasks
+(1, 'Setup Database Schema', 'Design and implement database schema for products, orders, users', '2025-01-25', 'done', 'high', 2, NULL, 100),
+(1, 'Implement User Authentication', 'JWT-based authentication with OAuth2 support', '2025-02-05', 'in_progress', 'high', 2, NULL, 70),
+(1, 'Build Product Catalog API', 'RESTful API for product listing, search, and filtering', '2025-02-15', 'in_progress', 'high', 3, NULL, 45),
+(1, 'Payment Gateway Integration', 'Integrate Stripe and PayPal payment systems', '2025-03-01', 'todo', 'high', 4, NULL, 0),
+(1, 'Testing & QA', 'Comprehensive testing of all modules', '2025-06-15', 'todo', 'medium', 7, NULL, 0),
+-- Mobile App Redesign tasks
+(2, 'UI/UX Wireframes', 'Create wireframes for all main screens', '2025-02-10', 'done', 'high', 6, NULL, 100),
+(2, 'Design System Setup', 'Establish design tokens, colors, typography', '2025-02-20', 'in_progress', 'high', 6, NULL, 60),
+(2, 'Home Screen Implementation', 'Develop new home screen with redesigned layout', '2025-03-05', 'todo', 'medium', 8, NULL, 0),
+(2, 'Dark Mode Support', 'Implement dark mode across the application', '2025-03-15', 'todo', 'low', 8, NULL, 0),
+-- Data Analytics Dashboard tasks
+(3, 'Data Pipeline Setup', 'Setup ETL pipeline for data ingestion', '2025-03-10', 'in_progress', 'high', 9, NULL, 55),
+(3, 'Chart Components', 'Build reusable chart components (line, bar, pie)', '2025-03-25', 'todo', 'medium', 10, NULL, 0),
+(3, 'Real-time Data Updates', 'Implement WebSocket for real-time updates', '2025-04-10', 'todo', 'high', 10, NULL, 0);
+
+-- Personal Tasks (project_id = NULL)
+INSERT INTO Tasks (project_id, name, description, due_date, status, priority, assigned_to, created_by, progress) VALUES
+-- Alice's personal tasks
+(NULL, 'Learn GraphQL', 'Complete GraphQL tutorial and build a simple API', '2025-02-20', 'in_progress', 'medium', NULL, 3, 35),
+(NULL, 'Update Portfolio', 'Add recent projects to personal portfolio website', '2025-02-15', 'todo', 'low', NULL, 3, 0),
+(NULL, 'Read "Clean Code" book', 'Finish reading and take notes on key principles', '2025-03-01', 'todo', 'low', NULL, 3, 10),
+-- Bob's personal tasks
+(NULL, 'Prepare Tech Talk', 'Prepare presentation on microservices architecture', '2025-02-25', 'in_progress', 'high', NULL, 4, 60),
+(NULL, 'Review AWS Certifications', 'Study for AWS Solutions Architect exam', '2025-03-15', 'todo', 'medium', NULL, 4, 0),
+-- Sarah's personal tasks
+(NULL, 'Design Personal Brand', 'Create personal logo and brand identity', '2025-02-18', 'in_progress', 'medium', NULL, 5, 45),
+(NULL, 'Sketch Practice', 'Daily UI sketching exercises', '2025-02-10', 'todo', 'low', NULL, 5, 0),
+-- Mike's personal tasks
+(NULL, 'Automation Script', 'Write script to automate test reports generation', '2025-02-22', 'todo', 'high', NULL, 6, 0),
+(NULL, 'Bug Tracking System Setup', 'Setup and configure Jira for personal bug tracking', '2025-02-12', 'done', 'medium', NULL, 6, 100);
+
+-- Task Checklists
+INSERT INTO Task_Checklists (task_id, title, description, is_completed, completed_at, position) VALUES
+-- Checklists for "Implement User Authentication" (Task #2)
+(2, 'Create User model', 'Define user schema with fields: id, email, password, profile', TRUE, '2025-01-28 10:30:00', 1),
+(2, 'Implement password hashing', 'Use bcrypt for secure password storage', TRUE, '2025-01-29 14:15:00', 2),
+(2, 'JWT token generation', 'Create access and refresh tokens', TRUE, '2025-02-01 09:00:00', 3),
+(2, 'OAuth2 Google integration', 'Allow users to login with Google', FALSE, NULL, 4),
+(2, 'Login endpoint', 'POST /api/auth/login', TRUE, '2025-02-02 16:20:00', 5),
+(2, 'Register endpoint', 'POST /api/auth/register', FALSE, NULL, 6),
+-- Checklists for "Build Product Catalog API" (Task #3)
+(3, 'Product model setup', 'Define product schema with categories', TRUE, '2025-02-05 11:00:00', 1),
+(3, 'GET /api/products endpoint', 'List all products with pagination', TRUE, '2025-02-07 15:30:00', 2),
+(3, 'Search functionality', 'Full-text search by name and description', FALSE, NULL, 3),
+(3, 'Filter by category', 'Allow filtering products by category', FALSE, NULL, 4),
+(3, 'Sort by price/date', 'Implement sorting options', FALSE, NULL, 5),
+-- Checklists for personal task "Learn GraphQL" (Task #13)
+(13, 'Setup GraphQL server', 'Install Apollo Server and configure', TRUE, '2025-02-08 14:00:00', 1),
+(13, 'Define schema', 'Create types, queries, and mutations', TRUE, '2025-02-10 10:30:00', 2),
+(13, 'Implement resolvers', 'Write resolver functions for all queries', FALSE, NULL, 3),
+(13, 'Add authentication', 'Secure GraphQL API with JWT', FALSE, NULL, 4),
+-- Checklists for personal task "Prepare Tech Talk" (Task #16)
+(16, 'Research content', 'Gather information on microservices patterns', TRUE, '2025-02-15 09:00:00', 1),
+(16, 'Create slide deck', 'Design presentation with examples', TRUE, '2025-02-18 16:00:00', 2),
+(16, 'Prepare demo', 'Build simple microservice demo', FALSE, NULL, 3),
+(16, 'Practice presentation', 'Rehearse 2-3 times', FALSE, NULL, 4);
+
+-- Reminders
+INSERT INTO Reminders (task_id, reminder_time) VALUES
+-- Project tasks reminders
+(2, '2025-02-04 09:00:00'),
+(3, '2025-02-14 10:00:00'),
+(4, '2025-02-28 09:00:00'),
+(10, '2025-03-09 14:00:00'),
+(11, '2025-03-24 11:00:00'),
+-- Personal tasks reminders
+(13, '2025-02-19 10:00:00'), -- Learn GraphQL reminder
+(16, '2025-02-24 09:00:00'), -- Prepare Tech Talk reminder
+(17, '2025-03-14 08:00:00'), -- AWS Certification reminder
+(20, '2025-02-21 15:00:00'); -- Automation Script reminder
+
+-- Events
+INSERT INTO Events (project_id, title, description, start_time, end_time, recurrence) VALUES
+(1, 'Sprint Planning', 'Plan tasks for sprint #3', '2025-02-10 10:00:00', '2025-02-10 11:30:00', 'none'),
+(1, 'Daily Standup', 'Daily team sync-up', '2025-02-05 09:00:00', '2025-02-05 09:15:00', 'daily'),
+(1, 'Code Review Session', 'Review PRs from last week', '2025-02-07 14:00:00', '2025-02-07 15:00:00', 'weekly'),
+(2, 'Design Review', 'Review UI mockups with stakeholders', '2025-02-12 15:00:00', '2025-02-12 16:30:00', 'none'),
+(2, 'Weekly Sync', 'Team sync and progress update', '2025-02-06 10:00:00', '2025-02-06 10:30:00', 'weekly'),
+(3, 'Demo Session', 'Demo dashboard to stakeholders', '2025-03-15 14:00:00', '2025-03-15 15:00:00', 'none');
+
+-- Messages
+INSERT INTO Messages (project_id, user_id, content, parent_id) VALUES
+-- E-commerce Platform messages
+(1, 1, 'Hey team! Great progress on the authentication module. Let me know if you need any help with OAuth2 integration.', NULL),
+(1, 2, 'Thanks John! I''m working on the Google OAuth flow now. Should have it ready by end of week.', 1),
+(1, 3, 'The Product API is coming along well. I''ve implemented the basic CRUD operations. Next up is the search functionality.', NULL),
+(1, 1, 'Awesome! Make sure to add proper error handling and validation.', 3),
+(1, 4, 'Quick question about payment gateway - should we support both sandbox and production environments from the start?', NULL),
+(1, 1, 'Yes, definitely. We''ll need sandbox for testing. Let''s discuss architecture in tomorrow''s standup.', 5),
+-- Mobile App Redesign messages
+(2, 5, 'The wireframes are complete and uploaded to Figma. Please review and share feedback!', NULL),
+(2, 6, 'Looks great Sarah! I really like the new navigation pattern. One suggestion: can we make the CTAs more prominent?', 7),
+(2, 5, 'Good point! I''ll update the primary buttons with more contrast.', 8),
+-- Data Analytics Dashboard messages
+(3, 7, 'Data pipeline is now pulling data from all sources. We''re seeing about 2-3 second latency.', NULL),
+(3, 8, 'That''s good! For the charts, should we use a library like Chart.js or D3?', NULL),
+(3, 7, 'I''d recommend D3 for more flexibility, especially for custom visualizations we''ll need later.', 11);
+
+INSERT INTO labels (name) VALUES
+('Backend'),
+('Frontend'),
+('Database'),
+('API'),
+('UI/UX'),
+('High Priority'),
+('Medium Priority'),
+('Low Priority'),
+('Testing'),
+('Payment'),
+('Real-time');
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(1, 3),
+(1, 1),
+(1, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(2, 1),
+(2, 4),
+(2, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(3, 1),
+(3, 4),
+(3, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(4, 1),
+(4, 4),
+(4, 10),
+(4, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(5, 9),
+(5, 7);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(6, 5),
+(6, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(7, 5),
+(7, 6);
+
+INSERT INTO task_labels (task_id, label_id) VALUES
+(8, 2),
+(8, 7);
+
+-- Create indexes for better query performance
+CREATE INDEX idx_projects_manager ON Projects(manager_id);
+CREATE INDEX idx_project_members_project ON Project_Members(project_id);
+CREATE INDEX idx_project_members_user ON Project_Members(user_id);
+CREATE INDEX idx_tasks_created_by ON Tasks(created_by); -- For personal tasks
+CREATE INDEX idx_tasks_project ON Tasks(project_id);
+CREATE INDEX idx_tasks_assigned ON Tasks(assigned_to);
+CREATE INDEX idx_tasks_status ON Tasks(status);
+CREATE INDEX idx_messages_project ON Messages(project_id);
+CREATE INDEX idx_messages_parent ON Messages(parent_id);
+CREATE INDEX idx_reminders_task ON Reminders(task_id);
+CREATE INDEX idx_events_project ON Events(project_id);

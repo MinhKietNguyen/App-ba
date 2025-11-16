@@ -3,6 +3,7 @@ package org.example.batodolist.service.implement;
 import org.example.batodolist.common.BadRequestException;
 import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.ProjectRequest;
+import org.example.batodolist.dto.request.ProjectUpdateRequest;
 import org.example.batodolist.dto.response.ProjectResponse;
 import org.example.batodolist.model.Project;
 import org.example.batodolist.repo.ProjectRepository;
@@ -42,7 +43,7 @@ public class ProjectImplementService implements ProjectService {
     }
 
     @Override
-    public ProjectResponse update(ProjectRequest projectRequest, Long id) {
+    public ProjectResponse update(ProjectUpdateRequest projectRequest, Long id) {
         ProjectResponse projectResponse = new ProjectResponse();
         Project project = projectRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         BeanUtils.copyProperties(projectRequest, project);
@@ -53,7 +54,8 @@ public class ProjectImplementService implements ProjectService {
 
     @Override
     public void delete(Long id) {
-        projectRepository.deleteById(id);
+        Project project = projectRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        projectRepository.delete(project);
     }
     @Override
     public Page<ProjectResponse> paging(int offset, int limit) {

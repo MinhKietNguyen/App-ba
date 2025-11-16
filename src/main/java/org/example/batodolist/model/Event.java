@@ -36,7 +36,7 @@ public class Event {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private EventRecurrence recurrence = EventRecurrence.NONE;
+    private EventRecurrence recurrence = EventRecurrence.none;
 
     @Column(name = "integration_source", length = 50)
     private String integrationSource;

@@ -1,82 +1,82 @@
 package org.example.batodolist.service.implement;
 
-import lombok.RequiredArgsConstructor;
 import org.example.batodolist.common.BadRequestException;
+import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.TaskRequest;
 import org.example.batodolist.dto.request.TaskUpdateRequest;
 import org.example.batodolist.dto.response.TaskResponse;
+import org.example.batodolist.model.Project;
 import org.example.batodolist.model.Task;
+import org.example.batodolist.repo.ProjectRepository;
 import org.example.batodolist.repo.TaskRepository;
 import org.example.batodolist.service.TaskService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-@Transactional
 public class TaskImplementService implements TaskService {
-
     private final TaskRepository taskRepository;
+    private final ProjectRepository projectRepository;
+
+    @Autowired
+    public TaskImplementService(TaskRepository taskRepository, ProjectRepository projectRepository) {
+        this.taskRepository = taskRepository;
+        this.projectRepository = projectRepository;
+    }
 
     @Override
-    public TaskResponse create(TaskRequest request) {
+    public TaskResponse getByID(Long id){
+        Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        TaskResponse taskResponse = new TaskResponse();
+        BeanUtils.copyProperties(task, taskResponse);
+        Project project = projectRepository.findById(task.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        taskResponse.setProjectName(project.getName());
+        return taskResponse;
+    }
+
+    @Override
+    public TaskResponse create(TaskRequest taskRequest) {
+        TaskResponse taskResponse = new TaskResponse();
         Task task = new Task();
-        task.setName(request.getName());
-        task.setDescription(request.getDescription());
-        
-
-        Task saved = taskRepository.save(task);
-        return toResponse(saved);
+        Project project = projectRepository.findProjectByName(taskRequest.getProjectName());
+        BeanUtils.copyProperties(taskRequest, task);
+        task.setProject(project);
+        taskRepository.save(task);
+        BeanUtils.copyProperties(task, taskResponse);
+        return taskResponse;
     }
 
     @Override
-    public TaskResponse update(Long id, TaskUpdateRequest request) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Task not found: " + id));
-
-        if (request.getName() != null) {
-            task.setName(request.getName());
-        }
-        if (request.getDescription() != null) {
-            task.setDescription(request.getDescription());
-        }
-        if (request.getProgress() != null) {
-            task.setProgress(request.getProgress()); // Task.java đã có validate 0..100
-        }
-        
-        Task saved = taskRepository.save(task);
-        return toResponse(saved);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public TaskResponse getById(Long id) {
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new BadRequestException("Task not found: " + id));
-        return toResponse(task);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<TaskResponse> getAll() {
-        return taskRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+    public TaskResponse update(TaskUpdateRequest taskUpdateRequest, Long id) {
+        TaskResponse taskResponse = new TaskResponse();
+        Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        Project project = projectRepository.findProjectByName(taskUpdateRequest.getProjectName());
+        BeanUtils.copyProperties(taskUpdateRequest, task);
+        task.setProject(project);
+        taskRepository.save(task);
+        BeanUtils.copyProperties(task, taskResponse);
+        return taskResponse;
     }
 
     @Override
     public void delete(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new BadRequestException("Task not found: " + id);
-        }
-        taskRepository.deleteById(id);
+        Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        taskRepository.delete(task);
     }
-
-   
-    private TaskResponse toResponse(Task task) {
-        return new TaskResponse();
+    @Override
+    public Page<TaskResponse> paging(int offset, int limit) {
+        Pageable pageable = PageRequest.of(offset, limit);
+        return taskRepository.findAll(pageable).map(
+                x -> {
+                    TaskResponse taskResponse = new TaskResponse();
+                    Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+                    BeanUtils.copyProperties(x, taskResponse);
+                    taskResponse.setProjectName(project.getName());
+                    return taskResponse;
+                });
     }
 }

@@ -2,6 +2,7 @@ package org.example.batodolist.controller;
 
 import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.ProjectRequest;
+import org.example.batodolist.dto.request.ProjectUpdateRequest;
 import org.example.batodolist.dto.response.ProjectResponse;
 import org.example.batodolist.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,26 +20,26 @@ public class ProjectController {
         this.projectService = projectService;
     }
 
-    @GetMapping("")
+    @GetMapping("/detail")
     public ResponseEntity<ProjectResponse> getProject(@RequestParam Long id) {
         return ResponseEntity.ok().body(projectService.getById(id));
     }
 
-    @PostMapping("")
+    @PostMapping("/create")
     public ResponseEntity<ProjectResponse> postProject(@RequestBody ProjectRequest projectRequest) {
         return ResponseEntity.ok().body(projectService.create(projectRequest));
     }
 
-    @PutMapping("")
-    public ResponseEntity<ProjectResponse> putProject(@RequestBody ProjectRequest projectRequest, @RequestParam Long id){
+    @PutMapping("/update")
+    public ResponseEntity<ProjectResponse> putProject(@RequestBody ProjectUpdateRequest projectRequest, @RequestParam Long id){
         return ResponseEntity.ok().body(projectService.update(projectRequest, id));
     }
-    @DeleteMapping("")
+    @DeleteMapping("/delete")
     public ResponseEntity<ErrorCode> deleteProject(@RequestParam Long id) {
         projectService.delete(id);
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
-    @GetMapping("")
+    @GetMapping("/paging")
     public ResponseEntity<Page<ProjectResponse>> paging(int offset, int limit) {
         return ResponseEntity.ok().body(projectService.paging(offset, limit));
     }

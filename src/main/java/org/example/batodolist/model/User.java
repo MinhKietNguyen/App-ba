@@ -7,14 +7,15 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,7 +33,7 @@ public class User {
     private String fullName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role",nullable = false)
     private UserRole role;
 
     @CreationTimestamp
@@ -42,14 +43,4 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    // Relationships
-    @OneToMany(mappedBy = "manager", cascade = CascadeType.ALL)
-    private List<Project> managedProjects;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<ProjectMember> projectMemberships;
-
-    @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL)
-    private List<Task> personalTasks;
 }

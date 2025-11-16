@@ -2,6 +2,7 @@ package org.example.batodolist.controller;
 
 import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.ProjectMemberRequest;
+import org.example.batodolist.dto.request.ProjectMemberUpdateRequest;
 import org.example.batodolist.dto.response.ProjectMemberResponse;
 import org.example.batodolist.service.ProjectMemberService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,26 +20,26 @@ public class ProjectMemberController {
         this.projectMemberService = projectMemberService;
     }
 
-    @GetMapping("")
+    @GetMapping("/detail")
     public ResponseEntity<ProjectMemberResponse> getProjectMember(@RequestParam Long id) {
         return ResponseEntity.ok().body(projectMemberService.getById(id));
     }
 
-    @PostMapping("")
+    @PostMapping("/create")
     public ResponseEntity<ProjectMemberResponse> postProjectMember(@RequestBody ProjectMemberRequest projectMember) {
         return ResponseEntity.ok().body(projectMemberService.create(projectMember));
     }
 
-    @PutMapping("")
-    public ResponseEntity<ProjectMemberResponse> putProjectMember(@RequestBody ProjectMemberRequest projectMember, @RequestParam Long id){
-        return ResponseEntity.ok().body(projectMemberService.update(projectMember, id));
+    @PutMapping("/update")
+    public ResponseEntity<ProjectMemberResponse> putProjectMember(@RequestBody ProjectMemberUpdateRequest projectMemberUpdateRequest, @RequestParam Long id){
+        return ResponseEntity.ok().body(projectMemberService.update(projectMemberUpdateRequest, id));
     }
-    @DeleteMapping("")
+    @DeleteMapping("/delete")
     public ResponseEntity<ErrorCode> deleteProjectMember(@RequestParam Long id) {
         projectMemberService.delete(id);
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
-    @GetMapping("")
+    @GetMapping("/paging")
     public ResponseEntity<Page<ProjectMemberResponse>> paging(int offset, int limit) {
         return ResponseEntity.ok().body(projectMemberService.paging(offset, limit));
     }
