@@ -5,7 +5,7 @@ public enum ErrorCode {
     VALIDATION_ERROR("400", "Validation failed", 400),
     NOT_FOUND("001","ENTITY_NOT_FOUND",404),
     SUCCESS("002", "SUCCESS", 200),
-
+    WRONG_USER_OR_PASSWORD("400", "WRONG_USER_OR_PASSWORD", 400),
     USER_IS_EXISTED("003", "USER_IS_EXISTED", 404);
     public final String code;
 

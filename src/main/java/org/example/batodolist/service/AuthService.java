@@ -20,9 +20,14 @@ public class AuthService {
     private final JWTService jwtService;
 
     public String register(RegisterRequest request) {
+        if(checkUserExisted(request.getEmail(), request.getUsername())) {
+            throw new BadRequestException(ErrorCode.USER_IS_EXISTED);
+        }
         User user = User.builder()
                 .username(request.getUsername())
+                .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
                 .role(UserRole.member)
                 .build();
 
@@ -32,11 +37,16 @@ public class AuthService {
 
     public String login(LoginRequest request) {
         User user = userRepository.findUserByUsername(request.getUsername())
-                .orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.WRONG_USER_OR_PASSWORD));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash()))
-            throw new RuntimeException("Wrong password");
+            throw new BadRequestException(ErrorCode.WRONG_USER_OR_PASSWORD);
 
-        return jwtService.generateToken(user);
+        return jwtService.generateToken(user.getUsername());
+    }
+
+    private boolean checkUserExisted(String email, String username) {
+        return userRepository.findUserByUsername(username).isPresent() ||
+                userRepository.findUserByEmail(email).isPresent();
     }
 }

@@ -33,8 +33,10 @@ public class TaskImplementService implements TaskService {
         Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         TaskResponse taskResponse = new TaskResponse();
         BeanUtils.copyProperties(task, taskResponse);
-        Project project = projectRepository.findById(task.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        taskResponse.setProjectName(project.getName());
+        if(task.getProject().getId() != null){
+            Project project = projectRepository.findById(task.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+            taskResponse.setProjectName(project.getName());
+        }
         return taskResponse;
     }
 
@@ -42,7 +44,7 @@ public class TaskImplementService implements TaskService {
     public TaskResponse create(TaskRequest taskRequest) {
         TaskResponse taskResponse = new TaskResponse();
         Task task = new Task();
-        Project project = projectRepository.findProjectByName(taskRequest.getProjectName());
+        Project project = taskRequest.getProjectName() == null ? null : projectRepository.findProjectByName(taskRequest.getProjectName());
         BeanUtils.copyProperties(taskRequest, task);
         task.setProject(project);
         taskRepository.save(task);
@@ -54,7 +56,7 @@ public class TaskImplementService implements TaskService {
     public TaskResponse update(TaskUpdateRequest taskUpdateRequest, Long id) {
         TaskResponse taskResponse = new TaskResponse();
         Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        Project project = projectRepository.findProjectByName(taskUpdateRequest.getProjectName());
+        Project project = taskUpdateRequest.getProjectName() == null ? null : projectRepository.findProjectByName(taskUpdateRequest.getProjectName());
         BeanUtils.copyProperties(taskUpdateRequest, task);
         task.setProject(project);
         taskRepository.save(task);
@@ -73,9 +75,11 @@ public class TaskImplementService implements TaskService {
         return taskRepository.findAll(pageable).map(
                 x -> {
                     TaskResponse taskResponse = new TaskResponse();
-                    Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
                     BeanUtils.copyProperties(x, taskResponse);
-                    taskResponse.setProjectName(project.getName());
+                    if(x.getProject().getId() != null){
+                        Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+                        taskResponse.setProjectName(project.getName());
+                    }
                     return taskResponse;
                 });
     }

@@ -125,7 +125,8 @@ INSERT INTO Users (username, email, password_hash, full_name, role) VALUES
 ('alice_dev', 'alice@company.com', '$2a$10$123456789abcdefghijklm', 'Alice Johnson', 'member'),
 ('bob_dev', 'bob@company.com', '$2a$10$nopqrstuvwxyz123456789', 'Bob Williams', 'member'),
 ('sarah_design', 'sarah@company.com', '$2a$10$qwertyuiop1234567890ab', 'Sarah Brown', 'member'),
-('mike_qa', 'mike@company.com', '$2a$10$asdfghjkl0987654321xyz', 'Mike Davis', 'member');
+('mike_qa', 'mike@company.com', '$2a$10$asdfghjkl0987654321xyz', 'Mike Davis', 'member'),
+('Tester', 'mmm@gmail.com', '$2a$10$nzypt59NW29b4L5s2tuKQ.34AesjylzudL6rBpxOmcduTAnMxq7G.', 'Tester', 'member');
 
 -- Projects
 INSERT INTO Projects (name, description, start_date, end_date, manager_id) VALUES
