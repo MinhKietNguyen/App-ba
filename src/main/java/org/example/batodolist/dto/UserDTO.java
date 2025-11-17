@@ -12,6 +12,4 @@ public class UserDTO {
     private String email;
     private String fullName;
     private ProjectMemberRole roleInProject;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

@@ -1,13 +1,12 @@
-package org.example.batodolist.dto.request;
+package org.example.batodolist.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDate;
 
-@Getter
-@Setter
-public class ProjectRequest {
+@Data
+public class ProjectDTO {
+    private Long id;
     private String name;
     private String description;
     private LocalDate startDate;

@@ -1,16 +1,12 @@
-package org.example.batodolist.dto.response;
+package org.example.batodolist.dto;
 
 import lombok.Data;
 import org.example.batodolist.common.ProjectMemberRole;
-import org.example.batodolist.dto.ProjectDTO;
-import org.example.batodolist.dto.UserDTO;
-import org.example.batodolist.model.Project;
-import org.example.batodolist.model.User;
 
 import java.time.LocalDateTime;
 
 @Data
-public class ProjectMemberResponse {
+public class ProjectMemberDTO {
     private Long id;
     private ProjectDTO project;
     private UserDTO user;

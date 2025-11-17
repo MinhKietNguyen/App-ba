@@ -13,7 +13,6 @@ public class ProjectResponse {
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
-    private UserDTO manager;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
