@@ -40,7 +40,7 @@ public class ProjectController {
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
     @GetMapping("/paging")
-    public ResponseEntity<Page<ProjectResponse>> paging(int offset, int limit) {
+    public ResponseEntity<Page<ProjectResponse>> paging(@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(projectService.paging(offset, limit));
     }
 }

@@ -40,7 +40,7 @@ public class LabelController {
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
     @GetMapping("/paging")
-    public ResponseEntity<Page<LabelResponse>> paging(int offset, int limit) {
+    public ResponseEntity<Page<LabelResponse>> paging(@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(labelService.paging(offset, limit));
     }
 }

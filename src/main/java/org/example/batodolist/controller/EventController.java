@@ -45,7 +45,7 @@ public class EventController {
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
     @GetMapping("/paging")
-    public ResponseEntity<Page<EventResponse>> paging(int offset, int limit) {
+    public ResponseEntity<Page<EventResponse>> paging(@RequestParam(defaultValue = "0") int offset,@RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(eventService.paging(offset, limit));
     }
 }

@@ -19,6 +19,9 @@ public class Label {
     @Column(name = "name")
     private  String name;
 
+    @Column(name = "color")
+    private  String color;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

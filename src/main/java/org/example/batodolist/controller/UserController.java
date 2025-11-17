@@ -42,7 +42,7 @@ public class UserController {
     }
 
     @GetMapping("/paging")
-    public ResponseEntity<Page<UserResponse>> paging(@RequestParam int offset,@RequestParam int limit) {
+    public ResponseEntity<Page<UserResponse>> paging(@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(userService.paging(offset, limit));
     }
 }

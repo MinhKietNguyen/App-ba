@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "task_labels")
+@Table(name = "tasklabels")
 @Data
 public class TaskLabel {
     @EmbeddedId

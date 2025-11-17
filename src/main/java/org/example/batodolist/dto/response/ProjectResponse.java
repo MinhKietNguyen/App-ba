@@ -1,7 +1,7 @@
 package org.example.batodolist.dto.response;
 
 import lombok.Data;
-import org.example.batodolist.model.User;
+import org.example.batodolist.dto.UserDTO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,7 +13,7 @@ public class ProjectResponse {
     private String description;
     private LocalDate startDate;
     private LocalDate endDate;
-    private User manager;
+    private UserDTO manager;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

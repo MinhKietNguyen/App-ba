@@ -39,7 +39,7 @@ public class TaskController {
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
     @GetMapping("/paging")
-    public ResponseEntity<Page<TaskResponse>> paging(int offset, int limit) {
+    public ResponseEntity<Page<TaskResponse>> paging(@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(taskService.paging(offset, limit));
     }
 }

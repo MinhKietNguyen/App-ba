@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class LabelUpdateRequest {
     private  String name;
+    private  String color;
 }

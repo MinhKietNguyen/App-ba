@@ -12,6 +12,7 @@ public class LabelResponse {
 
     @Column(name = "name")
     private  String name;
+    private  String color;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

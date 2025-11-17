@@ -40,7 +40,7 @@ public class ReminderController {
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }
     @GetMapping("/paging")
-    public ResponseEntity<Page<ReminderResponse>> paging(int offset, int limit) {
+    public ResponseEntity<Page<ReminderResponse>> paging(@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok().body(reminderService.paging(offset, limit));
     }
 }

@@ -9,9 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "project_members", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"project_id", "user_id"})
-})
+@Table(name = "projectmembers")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,7 +30,7 @@ public class ProjectMember {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role_in_project", nullable = false)
+    @Column(name = "role", nullable = false)
     private ProjectMemberRole roleInProject;
 
     @CreationTimestamp
