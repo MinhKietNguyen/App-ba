@@ -1,4 +1,6 @@
 Hướng dẫn chạy Code
+//T mới sửa lại db ở postgresDB.txt; chúng m xóa đi db cũ đi làm lại cái mới
+
 
 - Nếu chưa có db thì nào postgresDB.txt;
 Lấy đống query phiên bản postgres bảo con chat nào chuyển về db mong muốn
