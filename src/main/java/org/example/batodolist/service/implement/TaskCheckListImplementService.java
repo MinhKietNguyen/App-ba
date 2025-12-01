@@ -15,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 public class TaskCheckListImplementService implements TaskCheckListService {
     private final TaskCheckListRepository taskCheckListRepository;
@@ -37,6 +39,7 @@ public class TaskCheckListImplementService implements TaskCheckListService {
         TaskCheckListResponse taskCheckListResponse = new TaskCheckListResponse();
         TaskCheckList taskCheckList = new TaskCheckList();
         BeanUtils.copyProperties(taskCheckListRequest, taskCheckList);
+        taskCheckList.setCreatedAt(LocalDateTime.now());
         taskCheckListRepository.save(taskCheckList);
         BeanUtils.copyProperties(taskCheckList, taskCheckListResponse);
         return taskCheckListResponse;
@@ -46,6 +49,8 @@ public class TaskCheckListImplementService implements TaskCheckListService {
     public TaskCheckListResponse update(TaskCheckListUpdateRequest taskCheckListUpdateRequest, Long id) {
         TaskCheckListResponse taskCheckListResponse = new TaskCheckListResponse();
         TaskCheckList taskCheckList = taskCheckListRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
+        BeanUtils.copyProperties(taskCheckListUpdateRequest, taskCheckList);
+        taskCheckList.setUpdatedAt(LocalDateTime.now());
         taskCheckListRepository.save(taskCheckList);
         BeanUtils.copyProperties(taskCheckList, taskCheckListResponse);
         return taskCheckListResponse;
