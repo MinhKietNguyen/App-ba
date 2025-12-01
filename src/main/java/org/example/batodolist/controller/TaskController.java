@@ -20,21 +20,21 @@ public class TaskController {
         this.taskService = taskService;
     }
     @GetMapping("/detail")
-    public ResponseEntity<TaskResponse> getService(@RequestParam Long id) {
+    public ResponseEntity<TaskResponse> getTask(@RequestParam Long id) {
         return ResponseEntity.ok().body(taskService.getByID(id));
     }
 
     @PostMapping("/create")
-    public ResponseEntity<TaskResponse> postService(@RequestBody TaskRequest taskRequest) {
+    public ResponseEntity<TaskResponse> postTask(@RequestBody TaskRequest taskRequest) {
         return ResponseEntity.ok().body(taskService.create(taskRequest));
     }
 
     @PutMapping("/update")
-    public ResponseEntity<TaskResponse> putService(@RequestBody TaskUpdateRequest taskUpdateRequest, @RequestParam Long id){
+    public ResponseEntity<TaskResponse> putTask(@RequestBody TaskUpdateRequest taskUpdateRequest, @RequestParam Long id){
         return ResponseEntity.ok().body(taskService.update(taskUpdateRequest, id));
     }
     @DeleteMapping("/delete")
-    public ResponseEntity<ErrorCode> deleteService(@RequestParam Long id) {
+    public ResponseEntity<ErrorCode> deleteTask(@RequestParam Long id) {
         taskService.delete(id);
         return ResponseEntity.ok().body(ErrorCode.SUCCESS);
     }

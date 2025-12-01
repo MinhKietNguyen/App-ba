@@ -60,8 +60,10 @@ public class UserImplementService implements UserService {
     public UserResponse updateUser(UserUpdateRequest userUpdateRequest, Long id) {
         UserResponse userResponse = new UserResponse();
         User user = userRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        if(!passwordEncoder.matches(userUpdateRequest.getPassword(), user.getPasswordHash())) {
-            user.setPasswordHash(encodePassword(userUpdateRequest.getPassword()));
+        if(userUpdateRequest.getPassword() != null) {
+            if(!passwordEncoder.matches(userUpdateRequest.getPassword(), user.getPasswordHash())) {
+                user.setPasswordHash(encodePassword(userUpdateRequest.getPassword()));
+            }
         }
         if(checkUserExisted(userUpdateRequest.getEmail(), userUpdateRequest.getUsername())) {
             throw new BadRequestException(ErrorCode.USER_IS_EXISTED);
