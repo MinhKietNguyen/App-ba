@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
     ProjectMember findProjectMemberByProjectId(Long projectId);
 
-    ProjectMember findProjectMemberByUserName(String userName);
+    ProjectMember findProjectMemberByUser_Username(String userName);
 }

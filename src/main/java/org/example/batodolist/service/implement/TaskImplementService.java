@@ -54,7 +54,7 @@ public class TaskImplementService implements TaskService {
         if(project == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUserName(taskRequest.getAssignedTo());
+        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUser_Username(taskRequest.getAssignedTo());
         if(projectMember == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
@@ -75,7 +75,7 @@ public class TaskImplementService implements TaskService {
         if(project == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUserName(taskUpdateRequest.getAssignedTo());
+        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUser_Username(taskUpdateRequest.getAssignedTo());
         if(projectMember == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
