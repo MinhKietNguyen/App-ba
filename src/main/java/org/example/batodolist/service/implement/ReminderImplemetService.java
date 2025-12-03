@@ -8,11 +8,8 @@ import org.example.batodolist.dto.request.ReminderUpdateRequest;
 import org.example.batodolist.dto.response.ReminderResponse;
 import org.example.batodolist.model.Reminder;
 import org.example.batodolist.model.Task;
-import org.example.batodolist.model.User;
-import org.example.batodolist.repo.ProjectRepository;
 import org.example.batodolist.repo.ReminderRepository;
 import org.example.batodolist.repo.TaskRepository;
-import org.example.batodolist.repo.UserRepository;
 import org.example.batodolist.service.ReminderService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -26,16 +23,9 @@ public class ReminderImplemetService implements ReminderService {
 
     private final TaskRepository taskRepository;
 
-    private final UserRepository userRepository;
-
-    private final ProjectRepository projectRepository;
-
-
-    public ReminderImplemetService(ReminderRepository reminderRepository, TaskRepository taskRepository,  UserRepository userRepository, ProjectRepository projectRepository) {
+    public ReminderImplemetService(ReminderRepository reminderRepository, TaskRepository taskRepository) {
         this.reminderRepository = reminderRepository;
         this.taskRepository = taskRepository;
-        this.userRepository = userRepository;
-        this.projectRepository = projectRepository;
     }
 
     @Override
@@ -95,7 +85,5 @@ public class ReminderImplemetService implements ReminderService {
         BeanUtils.copyProperties(task, taskDTO);
 
         reminderResponse.setTask(taskDTO);
-    }
-    private void setupReminderUser(User user, TaskDTO taskDTO){
     }
 }

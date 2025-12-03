@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 @Data
 public class TaskCheckListUpdateRequest {
+    private String taskName;
+
     private String title;
 
     private String description;

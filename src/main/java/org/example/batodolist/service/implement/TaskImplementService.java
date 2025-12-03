@@ -6,7 +6,9 @@ import org.example.batodolist.dto.request.TaskRequest;
 import org.example.batodolist.dto.request.TaskUpdateRequest;
 import org.example.batodolist.dto.response.TaskResponse;
 import org.example.batodolist.model.Project;
+import org.example.batodolist.model.ProjectMember;
 import org.example.batodolist.model.Task;
+import org.example.batodolist.repo.ProjectMemberRepository;
 import org.example.batodolist.repo.ProjectRepository;
 import org.example.batodolist.repo.TaskRepository;
 import org.example.batodolist.service.TaskService;
@@ -22,10 +24,13 @@ public class TaskImplementService implements TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
 
+    private final ProjectMemberRepository projectMemberRepository;
+
     @Autowired
-    public TaskImplementService(TaskRepository taskRepository, ProjectRepository projectRepository) {
+    public TaskImplementService(TaskRepository taskRepository, ProjectRepository projectRepository,  ProjectMemberRepository projectMemberRepository) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
+        this.projectMemberRepository = projectMemberRepository;
     }
 
     @Override
@@ -37,6 +42,7 @@ public class TaskImplementService implements TaskService {
             Project project = projectRepository.findById(task.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
             taskResponse.setProjectName(project.getName());
         }
+        taskResponse.setAssignedTo(task.getAssignedTo().getUser().getUsername());
         return taskResponse;
     }
 
@@ -44,11 +50,20 @@ public class TaskImplementService implements TaskService {
     public TaskResponse create(TaskRequest taskRequest) {
         TaskResponse taskResponse = new TaskResponse();
         Task task = new Task();
-        Project project = taskRequest.getProjectName() == null ? null : projectRepository.findProjectByName(taskRequest.getProjectName());
+        Project project = projectRepository.findProjectByName(taskRequest.getProjectName());
+        if(project == null){
+            throw new BadRequestException(ErrorCode.NOT_FOUND);
+        }
+        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUserName(taskRequest.getAssignedTo());
+        if(projectMember == null){
+            throw new BadRequestException(ErrorCode.NOT_FOUND);
+        }
         BeanUtils.copyProperties(taskRequest, task);
         task.setProject(project);
+        task.setAssignedTo(projectMember);
         taskRepository.save(task);
         BeanUtils.copyProperties(task, taskResponse);
+        taskResponse.setAssignedTo(task.getAssignedTo().getUser().getUsername());
         return taskResponse;
     }
 
@@ -56,11 +71,20 @@ public class TaskImplementService implements TaskService {
     public TaskResponse update(TaskUpdateRequest taskUpdateRequest, Long id) {
         TaskResponse taskResponse = new TaskResponse();
         Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        Project project = taskUpdateRequest.getProjectName() == null ? null : projectRepository.findProjectByName(taskUpdateRequest.getProjectName());
+        Project project = projectRepository.findProjectByName(taskUpdateRequest.getProjectName());
+        if(project == null){
+            throw new BadRequestException(ErrorCode.NOT_FOUND);
+        }
+        ProjectMember projectMember = projectMemberRepository.findProjectMemberByUserName(taskUpdateRequest.getAssignedTo());
+        if(projectMember == null){
+            throw new BadRequestException(ErrorCode.NOT_FOUND);
+        }
         BeanUtils.copyProperties(taskUpdateRequest, task);
         task.setProject(project);
+        task.setAssignedTo(projectMember);
         taskRepository.save(task);
         BeanUtils.copyProperties(task, taskResponse);
+        taskResponse.setAssignedTo(task.getAssignedTo().getUser().getUsername());
         return taskResponse;
     }
 
@@ -80,6 +104,7 @@ public class TaskImplementService implements TaskService {
                         Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
                         taskResponse.setProjectName(project.getName());
                     }
+                    taskResponse.setAssignedTo(x.getAssignedTo().getUser().getUsername());
                     return taskResponse;
                 });
     }
