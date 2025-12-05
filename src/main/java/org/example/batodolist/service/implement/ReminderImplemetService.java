@@ -6,12 +6,12 @@ import org.example.batodolist.dto.TaskDTO;
 import org.example.batodolist.dto.request.ReminderRequest;
 import org.example.batodolist.dto.request.ReminderUpdateRequest;
 import org.example.batodolist.dto.response.ReminderResponse;
+import org.example.batodolist.mapper.GenericMapper;
 import org.example.batodolist.model.Reminder;
 import org.example.batodolist.model.Task;
 import org.example.batodolist.repo.ReminderRepository;
 import org.example.batodolist.repo.TaskRepository;
 import org.example.batodolist.service.ReminderService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,16 +23,19 @@ public class ReminderImplemetService implements ReminderService {
 
     private final TaskRepository taskRepository;
 
-    public ReminderImplemetService(ReminderRepository reminderRepository, TaskRepository taskRepository) {
+    private final GenericMapper genericMapper;
+
+    public ReminderImplemetService(ReminderRepository reminderRepository, TaskRepository taskRepository,  GenericMapper genericMapper) {
         this.reminderRepository = reminderRepository;
         this.taskRepository = taskRepository;
+        this.genericMapper = genericMapper;
     }
 
     @Override
     public ReminderResponse getById(Long id){
         Reminder reminder = reminderRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         ReminderResponse reminderResponse = new ReminderResponse();
-        BeanUtils.copyProperties(reminder, reminderResponse);
+        genericMapper.copy(reminder, reminderResponse);
         setupReminderTask(reminder.getTask(), reminderResponse);
         return reminderResponse;
     }
@@ -41,13 +44,13 @@ public class ReminderImplemetService implements ReminderService {
     public ReminderResponse create(ReminderRequest reminderRequest) {
         ReminderResponse reminderResponse = new ReminderResponse();
         Reminder reminder = new Reminder();
-        BeanUtils.copyProperties(reminderRequest, reminder);
+        genericMapper.copy(reminderRequest, reminder);
 
         Task task = taskRepository.findTaskByName(reminderRequest.getTaskName()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         reminder.setTask(task);
 
         reminderRepository.save(reminder);
-        BeanUtils.copyProperties(reminder, reminderResponse);
+        genericMapper.copy(reminder, reminderResponse);
         setupReminderTask(reminder.getTask(), reminderResponse);
         return reminderResponse;
     }
@@ -56,9 +59,9 @@ public class ReminderImplemetService implements ReminderService {
     public ReminderResponse update(ReminderUpdateRequest reminderUpdateRequest, Long id) {
         ReminderResponse reminderResponse = new ReminderResponse();
         Reminder reminder = reminderRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        BeanUtils.copyProperties(reminderUpdateRequest, reminder);
+        genericMapper.copy(reminderUpdateRequest, reminder);
         reminderRepository.save(reminder);
-        BeanUtils.copyProperties(reminder, reminderResponse);
+        genericMapper.copy(reminder, reminderResponse);
         setupReminderTask(reminder.getTask(), reminderResponse);
         return reminderResponse;
     }
@@ -74,7 +77,7 @@ public class ReminderImplemetService implements ReminderService {
         return reminderRepository.findAll(pageable).map(
                 x -> {
                     ReminderResponse reminderResponse = new ReminderResponse();
-                    BeanUtils.copyProperties(x, reminderResponse);
+                    genericMapper.copy(x, reminderResponse);
                     setupReminderTask(x.getTask(), reminderResponse);
                     return reminderResponse;
                 });
@@ -82,7 +85,7 @@ public class ReminderImplemetService implements ReminderService {
     private void setupReminderTask(Task task, ReminderResponse reminderResponse) {
         TaskDTO taskDTO = new TaskDTO();
 
-        BeanUtils.copyProperties(task, taskDTO);
+        genericMapper.copy(task, taskDTO);
 
         reminderResponse.setTask(taskDTO);
     }

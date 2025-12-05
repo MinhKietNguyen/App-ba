@@ -6,6 +6,7 @@ import org.example.batodolist.common.UserRole;
 import org.example.batodolist.dto.request.UserRequest;
 import org.example.batodolist.dto.request.UserUpdateRequest;
 import org.example.batodolist.dto.response.UserResponse;
+import org.example.batodolist.mapper.GenericMapper;
 import org.example.batodolist.model.User;
 import org.example.batodolist.repo.UserRepository;
 import org.example.batodolist.service.UserService;
@@ -25,17 +26,20 @@ public class UserImplementService implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final GenericMapper genericMapper;
+
     @Autowired
-    public UserImplementService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserImplementService(UserRepository userRepository, PasswordEncoder passwordEncoder,  GenericMapper genericMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.genericMapper = genericMapper;
     }
 
     @Override
     public UserResponse getUser(Long id){
         User user = userRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         UserResponse userResponse = new UserResponse();
-        BeanUtils.copyProperties(user, userResponse);
+        genericMapper.copy(user, userResponse);
         return userResponse;
     }
 
@@ -46,13 +50,13 @@ public class UserImplementService implements UserService {
         if(checkUserExisted(userRequest.getEmail(), userRequest.getUsername())) {
             throw new BadRequestException(ErrorCode.USER_IS_EXISTED);
         }
-        BeanUtils.copyProperties(userRequest, user);
+        genericMapper.copy(userRequest, user);
         user.setPasswordHash(encodePassword(userRequest.getPassword()));
         user.setRole(UserRole.member);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(null);
         userRepository.save(user);
-        BeanUtils.copyProperties(user, userResponse);
+        genericMapper.copy(user, userResponse);
         return userResponse;
     }
 
@@ -68,10 +72,10 @@ public class UserImplementService implements UserService {
         if(checkUserExisted(userUpdateRequest.getEmail(), userUpdateRequest.getUsername())) {
             throw new BadRequestException(ErrorCode.USER_IS_EXISTED);
         }
-        BeanUtils.copyProperties(userUpdateRequest, user);
+        genericMapper.copy(userUpdateRequest, user);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        BeanUtils.copyProperties(user, userResponse);
+        genericMapper.copy(user, userResponse);
         return userResponse;
     }
 
@@ -87,7 +91,7 @@ public class UserImplementService implements UserService {
         return userRepository.findAll(pageable).map(
                 x -> {
                     UserResponse userResponse = new UserResponse();
-                    BeanUtils.copyProperties(x, userResponse);
+                    genericMapper.copy(x, userResponse);
                     return userResponse;
                 });
     }

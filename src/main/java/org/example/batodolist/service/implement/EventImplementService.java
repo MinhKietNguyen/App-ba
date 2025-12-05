@@ -5,12 +5,12 @@ import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.EventRequest;
 import org.example.batodolist.dto.request.EventUpdateRequest;
 import org.example.batodolist.dto.response.EventResponse;
+import org.example.batodolist.mapper.GenericMapper;
 import org.example.batodolist.model.Event;
 import org.example.batodolist.model.Project;
 import org.example.batodolist.repo.EventRepository;
 import org.example.batodolist.repo.ProjectRepository;
 import org.example.batodolist.service.EventService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,21 +19,24 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class EventImplementService implements EventService {
-    public final EventRepository eventRepository;
+    private final EventRepository eventRepository;
 
-    public final ProjectRepository projectRepository;
+    private final ProjectRepository projectRepository;
+
+    private final GenericMapper genericMapper;
 
     @Autowired
-    public EventImplementService(EventRepository eventRepository, ProjectRepository projectRepository) {
+    public EventImplementService(EventRepository eventRepository, ProjectRepository projectRepository, GenericMapper genericMapper) {
         this.eventRepository = eventRepository;
         this.projectRepository = projectRepository;
+        this.genericMapper = genericMapper;
     }
 
     @Override
     public EventResponse getEvents(Long id){
         Event event = eventRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         EventResponse eventResponse = new EventResponse();
-        BeanUtils.copyProperties(event, eventResponse);
+        genericMapper.copy(event, eventResponse);
         if(event.getProject().getId() != null){
             Project project = projectRepository.findById(event.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
             eventResponse.setProjectName(project.getName());
@@ -49,10 +52,10 @@ public class EventImplementService implements EventService {
         if(project == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        BeanUtils.copyProperties(eventRequest, event);
+        genericMapper.copy(eventRequest, event);
         event.setProject(project);
         eventRepository.save(event);
-        BeanUtils.copyProperties(event, eventResponse);
+        genericMapper.copy(event, eventResponse);
         eventResponse.setProjectName(event.getProject().getName());
         return eventResponse;
     }
@@ -65,10 +68,10 @@ public class EventImplementService implements EventService {
         if(project == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        BeanUtils.copyProperties(eventUpdateRequest, event);
+        genericMapper.copy(eventUpdateRequest, event);
         event.setProject(project);
         eventRepository.save(event);
-        BeanUtils.copyProperties(event, eventResponse);
+        genericMapper.copy(event, eventResponse);
         eventResponse.setProjectName(event.getProject().getName());
         return eventResponse;
     }
@@ -84,7 +87,7 @@ public class EventImplementService implements EventService {
         return eventRepository.findAll(pageable).map(
                 x -> {
                     EventResponse eventResponse = new EventResponse();
-                    BeanUtils.copyProperties(x, eventResponse);
+                    genericMapper.copy(x, eventResponse);
                     if(x.getProject().getId() != null){
                         Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
                         eventResponse.setProjectName(project.getName());

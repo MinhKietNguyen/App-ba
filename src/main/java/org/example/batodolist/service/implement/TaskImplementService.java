@@ -5,6 +5,7 @@ import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.TaskRequest;
 import org.example.batodolist.dto.request.TaskUpdateRequest;
 import org.example.batodolist.dto.response.TaskResponse;
+import org.example.batodolist.mapper.GenericMapper;
 import org.example.batodolist.model.Project;
 import org.example.batodolist.model.ProjectMember;
 import org.example.batodolist.model.Task;
@@ -12,7 +13,6 @@ import org.example.batodolist.repo.ProjectMemberRepository;
 import org.example.batodolist.repo.ProjectRepository;
 import org.example.batodolist.repo.TaskRepository;
 import org.example.batodolist.service.TaskService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,18 +26,21 @@ public class TaskImplementService implements TaskService {
 
     private final ProjectMemberRepository projectMemberRepository;
 
+    private final GenericMapper genericMapper;
+
     @Autowired
-    public TaskImplementService(TaskRepository taskRepository, ProjectRepository projectRepository,  ProjectMemberRepository projectMemberRepository) {
+    public TaskImplementService(TaskRepository taskRepository, ProjectRepository projectRepository,  ProjectMemberRepository projectMemberRepository, GenericMapper genericMapper) {
         this.taskRepository = taskRepository;
         this.projectRepository = projectRepository;
         this.projectMemberRepository = projectMemberRepository;
+        this.genericMapper = genericMapper;
     }
 
     @Override
     public TaskResponse getByID(Long id){
         Task task = taskRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         TaskResponse taskResponse = new TaskResponse();
-        BeanUtils.copyProperties(task, taskResponse);
+        genericMapper.copy(task, taskResponse);
         if(task.getProject().getId() != null){
             Project project = projectRepository.findById(task.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
             taskResponse.setProjectName(project.getName());
@@ -58,11 +61,12 @@ public class TaskImplementService implements TaskService {
         if(projectMember == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        BeanUtils.copyProperties(taskRequest, task);
+        genericMapper.copy(taskRequest, task);
         task.setProject(project);
         task.setAssignedTo(projectMember);
         taskRepository.save(task);
-        BeanUtils.copyProperties(task, taskResponse);
+        genericMapper.copy(task, taskResponse);
+        taskResponse.setProjectName(project.getName());
         taskResponse.setAssignedTo(task.getAssignedTo().getUser().getUsername());
         return taskResponse;
     }
@@ -79,11 +83,12 @@ public class TaskImplementService implements TaskService {
         if(projectMember == null){
             throw new BadRequestException(ErrorCode.NOT_FOUND);
         }
-        BeanUtils.copyProperties(taskUpdateRequest, task);
+        genericMapper.copy(taskUpdateRequest, task);
         task.setProject(project);
         task.setAssignedTo(projectMember);
         taskRepository.save(task);
-        BeanUtils.copyProperties(task, taskResponse);
+        genericMapper.copy(task, taskResponse);
+        taskResponse.setProjectName(project.getName());
         taskResponse.setAssignedTo(task.getAssignedTo().getUser().getUsername());
         return taskResponse;
     }
@@ -99,7 +104,7 @@ public class TaskImplementService implements TaskService {
         return taskRepository.findAll(pageable).map(
                 x -> {
                     TaskResponse taskResponse = new TaskResponse();
-                    BeanUtils.copyProperties(x, taskResponse);
+                    genericMapper.copy(x, taskResponse);
                     if(x.getProject().getId() != null){
                         Project project = projectRepository.findById(x.getProject().getId()).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
                         taskResponse.setProjectName(project.getName());

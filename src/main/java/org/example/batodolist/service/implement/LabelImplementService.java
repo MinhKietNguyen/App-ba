@@ -5,30 +5,35 @@ import org.example.batodolist.common.ErrorCode;
 import org.example.batodolist.dto.request.LabelRequest;
 import org.example.batodolist.dto.request.LabelUpdateRequest;
 import org.example.batodolist.dto.response.LabelResponse;
+import org.example.batodolist.mapper.GenericMapper;
 import org.example.batodolist.model.Label;
 import org.example.batodolist.repo.LabelRepository;
 import org.example.batodolist.service.LabelService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+
 @Service
 public class LabelImplementService implements LabelService {
     private final LabelRepository labelRepository;
 
+    private final GenericMapper genericMapper;
+
     @Autowired
-    public LabelImplementService(LabelRepository labelRepository) {
+    public LabelImplementService(LabelRepository labelRepository,  GenericMapper genericMapper) {
         this.labelRepository = labelRepository;
+        this.genericMapper = genericMapper;
     }
 
     @Override
     public LabelResponse getById(Long id){
         Label label = labelRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
         LabelResponse labelResponse = new LabelResponse();
-        BeanUtils.copyProperties(label, labelResponse);
+        genericMapper.copy(label, labelResponse);
         return labelResponse;
     }
 
@@ -36,9 +41,10 @@ public class LabelImplementService implements LabelService {
     public LabelResponse create(LabelRequest labelRequest) {
         LabelResponse labelResponse = new LabelResponse();
         Label label = new Label();
-        BeanUtils.copyProperties(labelRequest, label);
+        genericMapper.copy(labelRequest, label);
+        label.setCreatedAt(LocalDateTime.now());
         labelRepository.save(label);
-        BeanUtils.copyProperties(label, labelResponse);
+        genericMapper.copy(label, labelResponse);
         return labelResponse;
     }
 
@@ -46,9 +52,9 @@ public class LabelImplementService implements LabelService {
     public LabelResponse update(LabelUpdateRequest labelUpdateRequest, Long id) {
         LabelResponse labelResponse = new LabelResponse();
         Label label = labelRepository.findById(id).orElseThrow(() -> new BadRequestException(ErrorCode.NOT_FOUND));
-        BeanUtils.copyProperties(labelUpdateRequest, label);
+        genericMapper.copy(labelUpdateRequest, label);
         labelRepository.save(label);
-        BeanUtils.copyProperties(label, labelResponse);
+        genericMapper.copy(label, labelResponse);
         return labelResponse;
     }
 
@@ -63,7 +69,7 @@ public class LabelImplementService implements LabelService {
         return labelRepository.findAll(pageable).map(
                 x -> {
                     LabelResponse labelResponse = new LabelResponse();
-                    BeanUtils.copyProperties(x, labelResponse);
+                    genericMapper.copy(x, labelResponse);
                     return labelResponse;
                 });
     }
