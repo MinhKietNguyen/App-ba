@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.example.batodolist.common.TaskPriority;
 import org.example.batodolist.common.TaskStatus;
+import org.example.batodolist.utils.ApplicationContextProvider;
+import org.example.batodolist.utils.SecurityUtils;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -72,29 +74,49 @@ public class Task {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "task")
     private List<TaskLabel> taskLabels = new ArrayList<>();
 
-    // Check constraint validation
     @PrePersist
+    private void prePersist() {
+        if (this.createdBy == null) {
+            try {
+                SecurityUtils securityUtils = ApplicationContextProvider.getBean(SecurityUtils.class);
+                this.createdBy = securityUtils.getCurrentUser();
+            } catch (Exception e) {
+                System.err.println("Warning: Could not auto-set createdBy: " + e.getMessage());
+            }
+        }
+
+        validateTask();
+    }
+
     @PreUpdate
+    private void preUpdate() {
+        validateTask();
+    }
+
+    // Validation
     private void validateTask() {
+        // All tasks must have createdBy (DB constraint)
+        if (createdBy == null) {
+            throw new IllegalStateException("Task must have createdBy");
+        }
+
+        // Project task: must have project and assignedTo
         if (project != null && assignedTo == null) {
             throw new IllegalStateException("Project tasks must have assignedTo");
         }
-        if (project != null && createdBy != null) {
-            throw new IllegalStateException("Project tasks cannot have createdBy");
-        }
+
+        // Personal task: must NOT have project and assignedTo
         if (project == null && assignedTo != null) {
             throw new IllegalStateException("Personal tasks cannot have assignedTo");
         }
-        if (project == null && createdBy == null) {
-            throw new IllegalStateException("Personal tasks must have createdBy");
-        }
+
         if (progress < 0 || progress > 100) {
             throw new IllegalArgumentException("Progress must be between 0 and 100");
         }
     }
 
     public boolean isPersonalTask() {
-        return project == null && createdBy != null;
+        return project == null && assignedTo == null;
     }
 
     public boolean isProjectTask() {
