@@ -23,15 +23,24 @@ public class AuthService {
         if(checkUserExisted(request.getEmail(), request.getUsername())) {
             throw new BadRequestException(ErrorCode.USER_IS_EXISTED);
         }
+        
+        // Use role from request, or default to member if not provided
+        UserRole role = request.getRole() != null ? request.getRole() : UserRole.member;
+        
+        // Log role for debugging
+        System.out.println("Register - Received role from request: " + request.getRole());
+        System.out.println("Register - Using role: " + role);
+        
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
-                .role(UserRole.member)
+                .role(role)
                 .build();
 
         userRepository.save(user);
+        System.out.println("Register - User saved with role: " + user.getRole());
         return "Registered!";
     }
 

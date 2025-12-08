@@ -37,26 +37,58 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        final String jwt = authHeader.substring(7);
-        final String username = jwtService.extractUsername(jwt);
+        try {
+            final String jwt = authHeader.substring(7);
+            String username = null;
+            
+            try {
+                username = jwtService.extractUsername(jwt);
+            } catch (Exception e) {
+                // Token không hợp lệ hoặc đã hết hạn
+                System.out.println("JWT Filter: Cannot extract username from token: " + e.getMessage());
+                // Không set authentication, để Spring Security xử lý (sẽ trả về 403)
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                try {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
+                    if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(
+                                        userDetails,
+                                        null,
+                                        userDetails.getAuthorities()
+                                );
+
+                        authToken.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
                         );
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    } else {
+                        // Token không hợp lệ hoặc đã hết hạn
+                        System.out.println("JWT Filter: Token is invalid or expired for user: " + username);
+                        // Không set authentication, để Spring Security xử lý (sẽ trả về 403)
+                    }
+                } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+                    // User không tồn tại trong database
+                    System.out.println("JWT Filter: User not found: " + username);
+                    // Không set authentication, để Spring Security xử lý (sẽ trả về 403)
+                } catch (Exception e) {
+                    // Lỗi khác khi load user
+                    System.out.println("JWT Filter: Error loading user: " + e.getMessage());
+                    e.printStackTrace();
+                    // Không set authentication, để Spring Security xử lý (sẽ trả về 403)
+                }
             }
+        } catch (Exception e) {
+            // Lỗi khác khi xử lý token
+            System.out.println("JWT Filter: Error processing token: " + e.getMessage());
+            e.printStackTrace();
+            // Không set authentication, để Spring Security xử lý (sẽ trả về 403)
         }
 
         filterChain.doFilter(request, response);
