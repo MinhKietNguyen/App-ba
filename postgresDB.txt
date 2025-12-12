@@ -1,3 +1,5 @@
+-- ===== DATABASE SCHEMA VỚI PROJECTMEMBER HỖ TRỢ PERSONAL TASKS =====
+
 -- Create ENUM types
 CREATE TYPE user_role AS ENUM ('admin', 'manager', 'member');
 CREATE TYPE project_member_role AS ENUM ('leader', 'member');
@@ -28,17 +30,19 @@ CREATE TABLE Projects (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Project Members Table (liên kết User và Project)
+-- Project Members Table
+-- QUAN TRỌNG: project_id có thể NULL để hỗ trợ personal tasks
 CREATE TABLE ProjectMembers (
     id SERIAL PRIMARY KEY,
-    project_id INT NOT NULL REFERENCES Projects(id) ON DELETE CASCADE,
+    project_id INT REFERENCES Projects(id) ON DELETE CASCADE, -- Có thể NULL
     user_id INT NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
     role project_member_role NOT NULL,
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(project_id, user_id)
+    UNIQUE(project_id, user_id) -- Đảm bảo user chỉ xuất hiện 1 lần trong 1 project
 );
 
--- Tasks Table (bao gồm cả project tasks và personal tasks)
+-- Tasks Table
+-- created_by và assigned_to đều reference đến ProjectMembers
 CREATE TABLE Tasks (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -48,11 +52,17 @@ CREATE TABLE Tasks (
     priority task_priority DEFAULT 'medium',
     progress INT DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
 
-    -- Nếu project_id NULL => personal task của user_id
-    -- Nếu project_id NOT NULL => project task, assigned_to_user_id là người được assign
+    -- Nếu project_id NULL => personal task
+    -- Nếu project_id NOT NULL => project task
     project_id INT REFERENCES Projects(id) ON DELETE CASCADE,
-    user_id INT NOT NULL REFERENCES Users(id) ON DELETE CASCADE, -- owner/creator
-    assigned_to_user_id INT REFERENCES Users(id), -- người được assign (cho project tasks)
+
+    -- created_by luôn NOT NULL - phải biết ai tạo task
+    created_by INT NOT NULL REFERENCES ProjectMembers(id) ON DELETE CASCADE,
+
+    -- assigned_to có thể NULL
+    -- - Personal task: thường NULL (tự làm)
+    -- - Project task: có thể assign cho member khác
+    assigned_to INT REFERENCES ProjectMembers(id) ON DELETE SET NULL,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -94,12 +104,13 @@ CREATE TABLE Events (
 );
 
 -- Messages Table
+-- Messages luôn thuộc về project nên dùng ProjectMember
 CREATE TABLE Messages (
     id SERIAL PRIMARY KEY,
     project_id INT NOT NULL REFERENCES Projects(id) ON DELETE CASCADE,
-    user_id INT NOT NULL REFERENCES Users(id),
+    project_member_id INT NOT NULL REFERENCES ProjectMembers(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    parent_id INT REFERENCES Messages(id),
+    parent_id INT REFERENCES Messages(id) ON DELETE SET NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -118,7 +129,7 @@ CREATE TABLE TaskLabels (
     PRIMARY KEY (task_id, label_id)
 );
 
--- Insert Sample Data
+-- ===== INSERT SAMPLE DATA =====
 
 -- Users
 INSERT INTO Users (username, email, password_hash, full_name, role) VALUES
@@ -127,7 +138,8 @@ INSERT INTO Users (username, email, password_hash, full_name, role) VALUES
 ('alice_dev', 'alice@company.com', '$2a$10$123456789abcdefghijklm', 'Alice Johnson', 'member'),
 ('bob_dev', 'bob@company.com', '$2a$10$nopqrstuvwxyz123456789', 'Bob Williams', 'member'),
 ('sarah_design', 'sarah@company.com', '$2a$10$qwertyuiop1234567890ab', 'Sarah Brown', 'member'),
-('mike_qa', 'mike@company.com', '$2a$10$asdfghjkl0987654321xyz', 'Mike Davis', 'member');
+('mike_qa', 'mike@company.com', '$2a$10$asdfghjkl0987654321xyz', 'Mike Davis', 'member'),
+('Tester', 'tester@gmail.com','$2a$12$XnozKPOys9cK42wax0Zfx.MDodMMcHyYv9s/dtVHwUOEnMwn6thHG','Tester','admin');
 
 -- Projects
 INSERT INTO Projects (name, description, start_date, end_date) VALUES
@@ -135,55 +147,67 @@ INSERT INTO Projects (name, description, start_date, end_date) VALUES
 ('Mobile App Redesign', 'Redesign mobile application with modern UI/UX', '2025-02-01', '2025-05-15'),
 ('Data Analytics Dashboard', 'Create real-time analytics dashboard for business intelligence', '2025-03-01', '2025-07-31');
 
--- Project Members
+-- Project Members (project_id NOT NULL - cho project tasks)
 INSERT INTO ProjectMembers (project_id, user_id, role) VALUES
 -- E-commerce Platform team
-(1, 2, 'leader'),
-(1, 3, 'member'),
-(1, 4, 'member'),
-(1, 6, 'member'),
+(1, 2, 'leader'),   -- ID: 1
+(1, 3, 'member'),   -- ID: 2
+(1, 4, 'member'),   -- ID: 3
+(1, 6, 'member'),   -- ID: 4
 -- Mobile App Redesign team
-(2, 2, 'leader'),
-(2, 5, 'member'),
-(2, 3, 'member'),
+(2, 2, 'leader'),   -- ID: 5
+(2, 5, 'member'),   -- ID: 6
+(2, 3, 'member'),   -- ID: 7
 -- Data Analytics Dashboard team
-(3, 2, 'leader'),
-(3, 3, 'member'),
-(3, 4, 'member');
+(3, 2, 'leader'),   -- ID: 8
+(3, 3, 'member'),   -- ID: 9
+(3, 4, 'member');   -- ID: 10
 
--- Tasks (Project Tasks - có project_id)
-INSERT INTO Tasks (name, description, due_date, status, priority, project_id, user_id, assigned_to_user_id, progress) VALUES
+-- Personal Project Members (project_id NULL - cho personal tasks)
+-- Mỗi user có 1 ProjectMember với project_id = NULL đại diện cho chính họ
+INSERT INTO ProjectMembers (project_id, user_id, role) VALUES
+(NULL, 1, 'member'),  -- ID: 11 - admin_user personal
+(NULL, 2, 'member'),  -- ID: 12 - john_manager personal
+(NULL, 3, 'member'),  -- ID: 13 - alice_dev personal
+(NULL, 4, 'member'),  -- ID: 14 - bob_dev personal
+(NULL, 5, 'member'),  -- ID: 15 - sarah_design personal
+(NULL, 6, 'member'),  -- ID: 16 - mike_qa personal
+(NULL, 7, 'member');  -- ID: 17 - Tester personal
+
+-- Tasks (Project Tasks - project_id NOT NULL)
+INSERT INTO Tasks (name, description, due_date, status, priority, project_id, created_by, assigned_to, progress) VALUES
 -- E-commerce Platform tasks
-('Setup Database Schema', 'Design and implement database schema for products, orders, users', '2025-01-25', 'done', 'high', 1, 2, 3, 100),
-('Implement User Authentication', 'JWT-based authentication with OAuth2 support', '2025-02-05', 'in_progress', 'high', 1, 2, 3, 70),
-('Build Product Catalog API', 'RESTful API for product listing, search, and filtering', '2025-02-15', 'in_progress', 'high', 1, 2, 4, 45),
-('Payment Gateway Integration', 'Integrate Stripe and PayPal payment systems', '2025-03-01', 'todo', 'high', 1, 2, 4, 0),
-('Testing & QA', 'Comprehensive testing of all modules', '2025-06-15', 'todo', 'medium', 1, 2, 6, 0),
+('Setup Database Schema', 'Design and implement database schema for products, orders, users', '2025-01-25', 'done', 'high', 1, 1, 2, 100),
+('Implement User Authentication', 'JWT-based authentication with OAuth2 support', '2025-02-05', 'in_progress', 'high', 1, 1, 2, 70),
+('Build Product Catalog API', 'RESTful API for product listing, search, and filtering', '2025-02-15', 'in_progress', 'high', 1, 1, 3, 45),
+('Payment Gateway Integration', 'Integrate Stripe and PayPal payment systems', '2025-03-01', 'todo', 'high', 1, 1, 3, 0),
+('Testing & QA', 'Comprehensive testing of all modules', '2025-06-15', 'todo', 'medium', 1, 1, 4, 0),
 -- Mobile App Redesign tasks
-('UI/UX Wireframes', 'Create wireframes for all main screens', '2025-02-10', 'done', 'high', 2, 2, 5, 100),
-('Design System Setup', 'Establish design tokens, colors, typography', '2025-02-20', 'in_progress', 'high', 2, 2, 5, 60),
-('Home Screen Implementation', 'Develop new home screen with redesigned layout', '2025-03-05', 'todo', 'medium', 2, 2, 3, 0),
-('Dark Mode Support', 'Implement dark mode across the application', '2025-03-15', 'todo', 'low', 2, 2, 3, 0),
+('UI/UX Wireframes', 'Create wireframes for all main screens', '2025-02-10', 'done', 'high', 2, 5, 6, 100),
+('Design System Setup', 'Establish design tokens, colors, typography', '2025-02-20', 'in_progress', 'high', 2, 5, 6, 60),
+('Home Screen Implementation', 'Develop new home screen with redesigned layout', '2025-03-05', 'todo', 'medium', 2, 5, 7, 0),
+('Dark Mode Support', 'Implement dark mode across the application', '2025-03-15', 'todo', 'low', 2, 5, 7, 0),
 -- Data Analytics Dashboard tasks
-('Data Pipeline Setup', 'Setup ETL pipeline for data ingestion', '2025-03-10', 'in_progress', 'high', 3, 2, 3, 55),
-('Chart Components', 'Build reusable chart components (line, bar, pie)', '2025-03-25', 'todo', 'medium', 3, 2, 4, 0),
-('Real-time Data Updates', 'Implement WebSocket for real-time updates', '2025-04-10', 'todo', 'high', 3, 2, 4, 0);
+('Data Pipeline Setup', 'Setup ETL pipeline for data ingestion', '2025-03-10', 'in_progress', 'high', 3, 8, 9, 55),
+('Chart Components', 'Build reusable chart components (line, bar, pie)', '2025-03-25', 'todo', 'medium', 3, 8, 10, 0),
+('Real-time Data Updates', 'Implement WebSocket for real-time updates', '2025-04-10', 'todo', 'high', 3, 8, 10, 0);
 
 -- Tasks (Personal Tasks - project_id = NULL)
-INSERT INTO Tasks (name, description, due_date, status, priority, project_id, user_id, assigned_to_user_id, progress) VALUES
--- Alice's personal tasks
-('Learn GraphQL', 'Complete GraphQL tutorial and build a simple API', '2025-02-20', 'in_progress', 'medium', NULL, 3, NULL, 35),
-('Update Portfolio', 'Add recent projects to personal portfolio website', '2025-02-15', 'todo', 'low', NULL, 3, NULL, 0),
-('Read "Clean Code" book', 'Finish reading and take notes on key principles', '2025-03-01', 'todo', 'low', NULL, 3, NULL, 10),
--- Bob's personal tasks
-('Prepare Tech Talk', 'Prepare presentation on microservices architecture', '2025-02-25', 'in_progress', 'high', NULL, 4, NULL, 60),
-('Review AWS Certifications', 'Study for AWS Solutions Architect exam', '2025-03-15', 'todo', 'medium', NULL, 4, NULL, 0),
--- Sarah's personal tasks
-('Design Personal Brand', 'Create personal logo and brand identity', '2025-02-18', 'in_progress', 'medium', NULL, 5, NULL, 45),
-('Sketch Practice', 'Daily UI sketching exercises', '2025-02-10', 'todo', 'low', NULL, 5, NULL, 0),
--- Mike's personal tasks
-('Automation Script', 'Write script to automate test reports generation', '2025-02-22', 'todo', 'high', NULL, 6, NULL, 0),
-('Bug Tracking System Setup', 'Setup and configure Jira for personal bug tracking', '2025-02-12', 'done', 'medium', NULL, 6, NULL, 100);
+-- Sử dụng ProjectMember có project_id = NULL
+INSERT INTO Tasks (name, description, due_date, status, priority, project_id, created_by, assigned_to, progress) VALUES
+-- Alice's personal tasks (created_by = 13)
+('Learn GraphQL', 'Complete GraphQL tutorial and build a simple API', '2025-02-20', 'in_progress', 'medium', NULL, 13, NULL, 35),
+('Update Portfolio', 'Add recent projects to personal portfolio website', '2025-02-15', 'todo', 'low', NULL, 13, NULL, 0),
+('Read "Clean Code" book', 'Finish reading and take notes on key principles', '2025-03-01', 'todo', 'low', NULL, 13, NULL, 10),
+-- Bob's personal tasks (created_by = 14)
+('Prepare Tech Talk', 'Prepare presentation on microservices architecture', '2025-02-25', 'in_progress', 'high', NULL, 14, NULL, 60),
+('Review AWS Certifications', 'Study for AWS Solutions Architect exam', '2025-03-15', 'todo', 'medium', NULL, 14, NULL, 0),
+-- Sarah's personal tasks (created_by = 15)
+('Design Personal Brand', 'Create personal logo and brand identity', '2025-02-18', 'in_progress', 'medium', NULL, 15, NULL, 45),
+('Sketch Practice', 'Daily UI sketching exercises', '2025-02-10', 'todo', 'low', NULL, 15, NULL, 0),
+-- Mike's personal tasks (created_by = 16)
+('Automation Script', 'Write script to automate test reports generation', '2025-02-22', 'todo', 'high', NULL, 16, NULL, 0),
+('Bug Tracking System Setup', 'Setup and configure Jira for personal bug tracking', '2025-02-12', 'done', 'medium', NULL, 16, NULL, 100);
 
 -- Task Checklists
 INSERT INTO TaskChecklists (task_id, title, description, is_completed, completed_at, position) VALUES
@@ -224,28 +248,31 @@ INSERT INTO Reminders (task_id, reminder_time) VALUES
 (20, '2025-02-21 15:00:00');
 
 -- Events
-INSERT INTO Events (project_id, title, description, start_time, end_time, recurrence) VALUES
-(1, 'Sprint Planning', 'Plan tasks for sprint #3', '2025-02-10 10:00:00', '2025-02-10 11:30:00', 'none'),
-(1, 'Daily Standup', 'Daily team sync-up', '2025-02-05 09:00:00', '2025-02-05 09:15:00', 'daily'),
-(1, 'Code Review Session', 'Review PRs from last week', '2025-02-07 14:00:00', '2025-02-07 15:00:00', 'weekly'),
-(2, 'Design Review', 'Review UI mockups with stakeholders', '2025-02-12 15:00:00', '2025-02-12 16:30:00', 'none'),
-(2, 'Weekly Sync', 'Team sync and progress update', '2025-02-06 10:00:00', '2025-02-06 10:30:00', 'weekly'),
-(3, 'Demo Session', 'Demo dashboard to stakeholders', '2025-03-15 14:00:00', '2025-03-15 15:00:00', 'none');
+INSERT INTO Events (project_id, title, description, start_time, end_time, recurrence, integration_source) VALUES
+(1, 'Sprint Planning', 'Plan tasks for sprint #3', '2025-02-10 10:00:00', '2025-02-10 11:30:00', 'none', NULL),
+(1, 'Daily Standup', 'Daily team sync-up', '2025-02-05 09:00:00', '2025-02-05 09:15:00', 'daily', 'google_calendar'),
+(1, 'Code Review Session', 'Review PRs from last week', '2025-02-07 14:00:00', '2025-02-07 15:00:00', 'weekly', 'slack'),
+(2, 'Design Review', 'Review UI mockups with stakeholders', '2025-02-12 15:00:00', '2025-02-12 16:30:00', 'none', 'outlook'),
+(2, 'Weekly Sync', 'Team sync and progress update', '2025-02-06 10:00:00', '2025-02-06 10:30:00', 'weekly', NULL),
+(3, 'Demo Session', 'Demo dashboard to stakeholders', '2025-03-15 14:00:00', '2025-03-15 15:00:00', 'none', 'google_calendar');
 
--- Messages
-INSERT INTO Messages (project_id, user_id, content, parent_id) VALUES
-(1, 2, 'Hey team! Great progress on the authentication module. Let me know if you need any help with OAuth2 integration.', NULL),
-(1, 3, 'Thanks John! I''m working on the Google OAuth flow now. Should have it ready by end of week.', 1),
-(1, 4, 'The Product API is coming along well. I''ve implemented the basic CRUD operations. Next up is the search functionality.', NULL),
-(1, 2, 'Awesome! Make sure to add proper error handling and validation.', 3),
-(1, 4, 'Quick question about payment gateway - should we support both sandbox and production environments from the start?', NULL),
-(1, 2, 'Yes, definitely. We''ll need sandbox for testing. Let''s discuss architecture in tomorrow''s standup.', 5),
-(2, 5, 'The wireframes are complete and uploaded to Figma. Please review and share feedback!', NULL),
-(2, 3, 'Looks great Sarah! I really like the new navigation pattern. One suggestion: can we make the CTAs more prominent?', 7),
-(2, 5, 'Good point! I''ll update the primary buttons with more contrast.', 8),
-(3, 3, 'Data pipeline is now pulling data from all sources. We''re seeing about 2-3 second latency.', NULL),
-(3, 4, 'That''s good! For the charts, should we use a library like Chart.js or D3?', NULL),
-(3, 3, 'I''d recommend D3 for more flexibility, especially for custom visualizations we''ll need later.', 11);
+-- Messages (sử dụng ProjectMembers với project_id NOT NULL)
+INSERT INTO Messages (project_id, project_member_id, content, parent_id) VALUES
+-- Project 1 messages
+(1, 1, 'Hey team! Great progress on the authentication module. Let me know if you need any help with OAuth2 integration.', NULL),
+(1, 2, 'Thanks John! I''m working on the Google OAuth flow now. Should have it ready by end of week.', 1),
+(1, 3, 'The Product API is coming along well. I''ve implemented the basic CRUD operations. Next up is the search functionality.', NULL),
+(1, 1, 'Awesome! Make sure to add proper error handling and validation.', 3),
+(1, 3, 'Quick question about payment gateway - should we support both sandbox and production environments from the start?', NULL),
+(1, 1, 'Yes, definitely. We''ll need sandbox for testing. Let''s discuss architecture in tomorrow''s standup.', 5),
+-- Project 2 messages
+(2, 6, 'The wireframes are complete and uploaded to Figma. Please review and share feedback!', NULL),
+(2, 7, 'Looks great Sarah! I really like the new navigation pattern. One suggestion: can we make the CTAs more prominent?', 7),
+(2, 6, 'Good point! I''ll update the primary buttons with more contrast.', 8),
+-- Project 3 messages
+(3, 9, 'Data pipeline is now pulling data from all sources. We''re seeing about 2-3 second latency.', NULL),
+(3, 10, 'That''s good! For the charts, should we use a library like Chart.js or D3?', NULL),
+(3, 9, 'I''d recommend D3 for more flexibility, especially for custom visualizations we''ll need later.', 11);
 
 -- Labels
 INSERT INTO Labels (name, color) VALUES
@@ -281,29 +308,55 @@ INSERT INTO TaskLabels (task_id, label_id) VALUES
 CREATE INDEX idx_project_members_project ON ProjectMembers(project_id);
 CREATE INDEX idx_project_members_user ON ProjectMembers(user_id);
 CREATE INDEX idx_tasks_project ON Tasks(project_id);
-CREATE INDEX idx_tasks_user ON Tasks(user_id);
-CREATE INDEX idx_tasks_assigned_to ON Tasks(assigned_to_user_id);
+CREATE INDEX idx_tasks_created_by ON Tasks(created_by);
+CREATE INDEX idx_tasks_assigned_to ON Tasks(assigned_to);
 CREATE INDEX idx_tasks_status ON Tasks(status);
 CREATE INDEX idx_tasks_due_date ON Tasks(due_date);
 CREATE INDEX idx_task_checklists_task ON TaskChecklists(task_id);
 CREATE INDEX idx_reminders_task ON Reminders(task_id);
 CREATE INDEX idx_events_project ON Events(project_id);
 CREATE INDEX idx_messages_project ON Messages(project_id);
-CREATE INDEX idx_messages_user ON Messages(user_id);
+CREATE INDEX idx_messages_project_member ON Messages(project_member_id);
 CREATE INDEX idx_messages_parent ON Messages(parent_id);
 CREATE INDEX idx_task_labels_task ON TaskLabels(task_id);
 CREATE INDEX idx_task_labels_label ON TaskLabels(label_id);
 
+-- ===== TRIGGER TỰ ĐỘNG TẠO PERSONAL PROJECT MEMBER KHI USER ĐĂNG KÝ =====
 
--- Đổi tên cột user_id thành created_by
-ALTER TABLE Tasks RENAME COLUMN user_id TO created_by;
+CREATE OR REPLACE FUNCTION create_personal_project_member()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Tự động tạo ProjectMember với project_id = NULL cho user mới
+    INSERT INTO ProjectMembers (project_id, user_id, role)
+    VALUES (NULL, NEW.id, 'member');
 
--- Đổi tên cột assigned_to_user_id thành assigned_to
-ALTER TABLE Tasks RENAME COLUMN assigned_to_user_id TO assigned_to;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-UPDATE Events SET integration_source = 'google_calendar' WHERE id IN (2, 6);
-UPDATE Events SET integration_source = 'outlook' WHERE id = 4;
-UPDATE Events SET integration_source = 'slack' WHERE id = 3;
+CREATE TRIGGER trigger_create_personal_project_member
+AFTER INSERT ON Users
+FOR EACH ROW
+EXECUTE FUNCTION create_personal_project_member();
 
-INSERT INTO Users (username, email, password_hash, full_name, role) VALUES
-('Tester', 'tester@gmail.com','$2a$12$XnozKPOys9cK42wax0Zfx.MDodMMcHyYv9s/dtVHwUOEnMwn6thHG','Tester','admin');
+-- ===== GIẢI THÍCH KIẾN TRÚC =====
+--
+-- 1. ProjectMembers có 2 loại:
+--    - project_id NOT NULL: Member của project thực tế
+--    - project_id NULL: Đại diện cho chính user đó (dùng cho personal tasks)
+--
+-- 2. Tasks.created_by luôn NOT NULL vì:
+--    - Project task: reference đến ProjectMember có project_id
+--    - Personal task: reference đến ProjectMember có project_id = NULL
+--
+-- 3. Tasks.assigned_to có thể NULL:
+--    - Personal task: thường NULL (tự làm)
+--    - Project task: có thể NULL hoặc assign cho member khác
+--
+-- 4. Messages.parent_id:
+--    - Quan hệ: 1-to-Many (0..1 parent to 0..* children)
+--    - Loại: Aggregation (không phải Composition)
+--    - Khi xóa parent, có thể set child.parent_id = NULL
+--
+-- 5. Trigger tự động:
+--    - Khi tạo User mới, tự động tạo ProjectMember với project_id = NULL
